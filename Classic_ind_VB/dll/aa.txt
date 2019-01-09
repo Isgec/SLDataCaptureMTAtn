@@ -1,0 +1,60 @@
+Microsoft (R) COFF Binary File Dumper Version 6.00.8447
+Copyright (C) Microsoft Corp 1992-1998. All rights reserved.
+
+
+Dump of file Classic_Ind_MC.dll
+
+File Type: DLL
+
+  Section contains the following exports for bio_star.dll
+
+           0 characteristics
+    4AF3CF31 time date stamp Fri Nov 06 12:54:33 2009
+        0.00 version
+           1 ordinal base
+          33 number of functions
+          33 number of names
+
+    ordinal hint RVA      name
+
+          1    0 00001028 Delete_Finger
+          2    1 0000109B Reset_Machine
+          3    2 000010A5 Write_Card
+          4    3 000010AA ascii_to_bin
+          5    4 0000107D bio_temp_cmd
+          6    5 0000102D bio_version
+          7    6 00001046 capture_data
+          8    7 00001050 card_list
+          9    8 00001091 date_delete
+         10    9 00001078 delete_card_list
+         11    A 00001037 device_close
+         12    B 0000105A device_connect
+         13    C 00001014 dll_version
+         14    D 00001032 enroll_template
+         15    E 00001064 eport_num
+         16    F 0000108C from_to_cc
+         17   10 0000101E get_data
+         18   11 00001041 get_date_data
+         19   12 0000104B get_date_time
+         20   13 00001019 get_email_setting
+         21   14 00001005 get_version
+         22   15 00001023 mail_location_id
+         23   16 00001082 memory_percent
+         24   17 0000100F restart
+         25   18 0000106E server_mail_id
+         26   19 000010A0 set_date
+         27   1A 0000103C set_gateway
+         28   1B 00001087 set_ipadd
+         29   1C 00001055 set_netmask
+         30   1D 000010AF set_time
+         31   1E 00001096 template_read
+         32   1F 0000105F write_temp_append
+         33   20 00001073 write_temp_card
+
+  Summary
+
+      100000 .data
+        5000 .idata
+       12000 .rdata
+        D000 .reloc
+      119000 .text
