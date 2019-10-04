@@ -25,6 +25,7 @@ Partial Class FrmMain
     Me.components = New System.ComponentModel.Container()
     Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(FrmMain))
     Me.gManual = New System.Windows.Forms.GroupBox()
+    Me.F_CardNo = New System.Windows.Forms.TextBox()
     Me.cmdConf = New System.Windows.Forms.Button()
     Me.radioProcess = New System.Windows.Forms.RadioButton()
     Me.radioPunch = New System.Windows.Forms.RadioButton()
@@ -36,9 +37,12 @@ Partial Class FrmMain
     Me.lbltmc = New System.Windows.Forms.Label()
     Me.lblmc = New System.Windows.Forms.Label()
     Me.lblmsg = New System.Windows.Forms.Label()
-    Me.F_CardNo = New System.Windows.Forms.TextBox()
     Me.tt = New System.Windows.Forms.ToolTip(Me.components)
+    Me.GroupBox1 = New System.Windows.Forms.GroupBox()
+    Me.cmdTimerStart = New System.Windows.Forms.Button()
+    Me.cmdTimerStop = New System.Windows.Forms.Button()
     Me.gManual.SuspendLayout()
+    Me.GroupBox1.SuspendLayout()
     Me.SuspendLayout()
     '
     'gManual
@@ -58,6 +62,14 @@ Partial Class FrmMain
     Me.gManual.TabIndex = 19
     Me.gManual.TabStop = False
     Me.gManual.Text = "Manual"
+    '
+    'F_CardNo
+    '
+    Me.F_CardNo.Location = New System.Drawing.Point(199, 19)
+    Me.F_CardNo.Name = "F_CardNo"
+    Me.F_CardNo.Size = New System.Drawing.Size(62, 20)
+    Me.F_CardNo.TabIndex = 10
+    Me.tt.SetToolTip(Me.F_CardNo, "Comma separated multiple CardNo")
     '
     'cmdConf
     '
@@ -179,20 +191,54 @@ Partial Class FrmMain
     Me.lblmsg.TabIndex = 23
     Me.lblmsg.Text = "Processing Message"
     '
-    'F_CardNo
+    'GroupBox1
     '
-    Me.F_CardNo.Location = New System.Drawing.Point(199, 19)
-    Me.F_CardNo.Name = "F_CardNo"
-    Me.F_CardNo.Size = New System.Drawing.Size(62, 20)
-    Me.F_CardNo.TabIndex = 10
-    Me.tt.SetToolTip(Me.F_CardNo, "Comma separated multiple CardNo")
+    Me.GroupBox1.Controls.Add(Me.cmdTimerStart)
+    Me.GroupBox1.Controls.Add(Me.cmdTimerStop)
+    Me.GroupBox1.ForeColor = System.Drawing.Color.Yellow
+    Me.GroupBox1.Location = New System.Drawing.Point(317, 53)
+    Me.GroupBox1.Name = "GroupBox1"
+    Me.GroupBox1.Size = New System.Drawing.Size(84, 83)
+    Me.GroupBox1.TabIndex = 24
+    Me.GroupBox1.TabStop = False
+    Me.GroupBox1.Text = "Scheduler"
+    '
+    'cmdTimerStart
+    '
+    Me.cmdTimerStart.FlatAppearance.BorderColor = System.Drawing.Color.Red
+    Me.cmdTimerStart.FlatAppearance.CheckedBackColor = System.Drawing.Color.FromArgb(CType(CType(255, Byte), Integer), CType(CType(128, Byte), Integer), CType(CType(0, Byte), Integer))
+    Me.cmdTimerStart.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(CType(CType(0, Byte), Integer), CType(CType(192, Byte), Integer), CType(CType(192, Byte), Integer))
+    Me.cmdTimerStart.FlatAppearance.MouseOverBackColor = System.Drawing.Color.CornflowerBlue
+    Me.cmdTimerStart.FlatStyle = System.Windows.Forms.FlatStyle.Flat
+    Me.cmdTimerStart.Location = New System.Drawing.Point(10, 20)
+    Me.cmdTimerStart.Name = "cmdTimerStart"
+    Me.cmdTimerStart.Size = New System.Drawing.Size(60, 23)
+    Me.cmdTimerStart.TabIndex = 5
+    Me.cmdTimerStart.Text = "Start"
+    Me.cmdTimerStart.UseVisualStyleBackColor = True
+    '
+    'cmdTimerStop
+    '
+    Me.cmdTimerStop.Enabled = False
+    Me.cmdTimerStop.FlatAppearance.BorderColor = System.Drawing.Color.Red
+    Me.cmdTimerStop.FlatAppearance.CheckedBackColor = System.Drawing.Color.FromArgb(CType(CType(255, Byte), Integer), CType(CType(128, Byte), Integer), CType(CType(0, Byte), Integer))
+    Me.cmdTimerStop.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(CType(CType(0, Byte), Integer), CType(CType(192, Byte), Integer), CType(CType(192, Byte), Integer))
+    Me.cmdTimerStop.FlatAppearance.MouseOverBackColor = System.Drawing.Color.CornflowerBlue
+    Me.cmdTimerStop.FlatStyle = System.Windows.Forms.FlatStyle.Flat
+    Me.cmdTimerStop.Location = New System.Drawing.Point(10, 49)
+    Me.cmdTimerStop.Name = "cmdTimerStop"
+    Me.cmdTimerStop.Size = New System.Drawing.Size(60, 23)
+    Me.cmdTimerStop.TabIndex = 6
+    Me.cmdTimerStop.Text = "Stop"
+    Me.cmdTimerStop.UseVisualStyleBackColor = True
     '
     'FrmMain
     '
     Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
     Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
     Me.BackColor = System.Drawing.Color.Black
-    Me.ClientSize = New System.Drawing.Size(319, 139)
+    Me.ClientSize = New System.Drawing.Size(410, 144)
+    Me.Controls.Add(Me.GroupBox1)
     Me.Controls.Add(Me.lblmsg)
     Me.Controls.Add(Me.lblmc)
     Me.Controls.Add(Me.lbltmc)
@@ -206,6 +252,7 @@ Partial Class FrmMain
     Me.Text = "Data Capture"
     Me.gManual.ResumeLayout(False)
     Me.gManual.PerformLayout()
+    Me.GroupBox1.ResumeLayout(False)
     Me.ResumeLayout(False)
     Me.PerformLayout()
 
@@ -224,4 +271,7 @@ Partial Class FrmMain
   Friend WithEvents cmdConf As System.Windows.Forms.Button
   Friend WithEvents F_CardNo As System.Windows.Forms.TextBox
   Friend WithEvents tt As System.Windows.Forms.ToolTip
+  Friend WithEvents GroupBox1 As GroupBox
+  Friend WithEvents cmdTimerStart As Button
+  Friend WithEvents cmdTimerStop As Button
 End Class

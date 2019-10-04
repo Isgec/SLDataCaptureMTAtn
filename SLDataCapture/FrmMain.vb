@@ -9,7 +9,7 @@ Public Class FrmMain
   Private Delegate Sub Attendance()
   Private Delegate Sub Punch()
   Private frmClosing As Boolean = False
-  Private Processing As Boolean = False
+  Public Processing As Boolean = False
   Private mayStop As Boolean = False
   Dim DataFilePath As String = Application.StartupPath
   Dim mcList As New ArrayList
@@ -45,7 +45,7 @@ Public Class FrmMain
         Me.Height = 82
         Me.gManual.Visible = False
       Else
-        Me.Height = 167
+        Me.Height = 180
         Me.gManual.Visible = True
       End If
       Me.F_sdt.Value = Now
@@ -499,6 +499,48 @@ Public Class FrmMain
 
   Private Sub cmdConf_Click(sender As System.Object, e As System.EventArgs) Handles cmdConf.Click
     Process.Start("notepad.exe", Application.StartupPath & "\IsgecMC.config")
+  End Sub
+
+  Delegate Sub ThreadedSub(frm As FrmMain)
+  Delegate Sub ThreadedNone()
+  Private WithEvents sch As Schedular = Nothing
+  Private Sub cmdTimerStart_Click(sender As Object, e As EventArgs) Handles cmdTimerStart.Click
+    cmdTimerStart.Enabled = False
+    cmdTimerStart.Text = "Loading..."
+    Dim tmp As ThreadedSub = AddressOf Start
+    tmp.BeginInvoke(Me, Nothing, Nothing)
+  End Sub
+  Private Sub Start(f As FrmMain)
+    sch = New Schedular
+    sch.frm = f
+    sch.Start()
+  End Sub
+
+  Private Sub sch_SchedularStarted() Handles sch.SchedularStarted
+    If cmdTimerStart.InvokeRequired Then
+      cmdTimerStart.Invoke(New ThreadedNone(AddressOf sch_SchedularStarted))
+    Else
+      cmdTimerStart.Enabled = False
+      cmdTimerStart.Text = "Start"
+      cmdTimerStop.Enabled = True
+    End If
+
+  End Sub
+
+  Private Sub sch_SchedularStopped() Handles sch.SchedularStopped
+    If cmdTimerStop.InvokeRequired Then
+      cmdTimerStop.Invoke(New ThreadedNone(AddressOf sch_SchedularStopped))
+    Else
+      cmdTimerStop.Enabled = False
+      cmdTimerStop.Text = "Stop"
+      cmdTimerStart.Enabled = True
+    End If
+  End Sub
+
+  Private Sub cmdTimerStop_Click(sender As Object, e As EventArgs) Handles cmdTimerStop.Click
+    cmdTimerStop.Enabled = False
+    cmdTimerStop.Text = "Closing..."
+    sch.StopJob()
   End Sub
 End Class
 
