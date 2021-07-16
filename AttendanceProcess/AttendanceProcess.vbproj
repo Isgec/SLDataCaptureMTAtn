@@ -143,6 +143,7 @@
     <Compile Include="_UZ_atnProcessedPunch.vb" />
     <Compile Include="_UZ_atnPunchRequired.vb" />
     <Compile Include="_UZ_atnRawPunch.vb" />
+    <Compile Include="_WFHRooster.vb" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="My Project\Resources.resx">

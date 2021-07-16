@@ -192,9 +192,9 @@ Public Class FrmMain
         End If
       Else
         If F_CardNo.Text = String.Empty Then
-          ProcessData(F_sdt.Text, F_sdt.Text)
+          ProcessData(F_sdt.Text, F_tdt.Text)
         Else
-          ProcessEmpData(F_sdt.Text, F_sdt.Text, F_CardNo.Text)
+          ProcessEmpData(F_sdt.Text, F_tdt.Text, F_CardNo.Text)
         End If
       End If
     Catch ex As Exception
@@ -282,8 +282,10 @@ Public Class FrmMain
     Dim aCardNo() As String = CardNo.Split(",".ToCharArray)
     Me.lbltmc.Text = aCardNo.Length
     For Each card As String In aCardNo
+      card = card.Trim
       Try
         Dim oEmp As SIS.ATN.atnEmployees = SIS.ATN.atnEmployees.GetByID(card)
+        If oEmp Is Nothing Then Continue For
         StartRow += 1
         Me.lblmc.Text = StartRow
 

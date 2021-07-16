@@ -257,48 +257,43 @@ Namespace SIS.ATN
       End Using
       Return Results
     End Function
-		Public Shared Function SelectCount(ByVal SearchState As Boolean, ByVal SearchText As String) As Integer
-			Return _RecordCount
-		End Function
+    Public Shared Function GetOPBRecordForQuarter(ByVal CardNo As String, ByVal ForMonth As Integer, ByVal FinYear As String) As SIS.ATN.atnBalanceTransfer
+      Dim Results As SIS.ATN.atnBalanceTransfer = Nothing
+      Dim qtr As String = "(1,2,3)"
+      Select Case ForMonth
+        Case 1, 2, 3
+          qtr = "(1,2,3)"
+        Case 4, 5, 6
+          qtr = "(4,5,6)"
+        Case 7, 8, 9
+          qtr = "(7,8,9)"
+        Case 10, 11, 12
+          qtr = "(10,11,12)"
+      End Select
+      Dim Sql As String = ""
+      Sql &= " SELECT top 1 * FROM [ATN_LeaveLedger] "
+      Sql &= "   WHERE [TranType] = 'OPB' AND [SubTranType]='MC' AND [FinYear] = '" & FinYear & "'"
+      Sql &= "     AND [CardNo] = '" & CardNo & "'"
+      Sql &= "     AND MONTH([ATN_LeaveLedger].[TranDate]) IN " & qtr
+      Using Con As SqlConnection = New SqlConnection(SIS.SYS.SQLDatabase.DBCommon.GetConnectionString())
+        Using Cmd As SqlCommand = Con.CreateCommand()
+          Cmd.CommandType = CommandType.Text
+          Cmd.CommandText = Sql
+          Con.Open()
+          Dim Reader As SqlDataReader = Cmd.ExecuteReader()
+          While (Reader.Read())
+            Results = New SIS.ATN.atnBalanceTransfer(Reader)
+          End While
+          Reader.Close()
+        End Using
+      End Using
+      Return Results
+    End Function
+    Public Shared Function SelectCount(ByVal SearchState As Boolean, ByVal SearchText As String) As Integer
+      Return _RecordCount
+    End Function
     Public Sub New(ByVal Reader As SqlDataReader)
-      On Error Resume Next
-      _RecordID = Ctype(Reader("RecordID"),Int32)
-      _TranType = Ctype(Reader("TranType"),String)
-      If Convert.IsDBNull(Reader("SubTranType")) Then
-        _SubTranType = String.Empty
-      Else
-        _SubTranType = Ctype(Reader("SubTranType"), String)
-      End If
-      _FinYear = Ctype(Reader("FinYear"),String)
-      _LeaveTypeID = Ctype(Reader("LeaveTypeID"),String)
-      _CardNo = Ctype(Reader("CardNo"),String)
-      _TranDate = Ctype(Reader("TranDate"),DateTime)
-      _Days = Ctype(Reader("Days"),Decimal)
-      If Convert.IsDBNull(Reader("Remarks")) Then
-        _Remarks = String.Empty
-      Else
-        _Remarks = Ctype(Reader("Remarks"), String)
-      End If
-    End Sub
-    Public Sub New(ByVal AliasName As String, ByVal Reader As SqlDataReader)
-      On Error Resume Next
-      _RecordID = Ctype(Reader(AliasName & "_RecordID"),Int32)
-      _TranType = Ctype(Reader(AliasName & "_TranType"),String)
-      If Convert.IsDBNull(Reader(AliasName & "_SubTranType")) Then
-        _SubTranType = String.Empty
-      Else
-        _SubTranType = Ctype(Reader(AliasName & "_SubTranType"), String)
-      End If
-      _FinYear = Ctype(Reader(AliasName & "_FinYear"),String)
-      _LeaveTypeID = Ctype(Reader(AliasName & "_LeaveTypeID"),String)
-      _CardNo = Ctype(Reader(AliasName & "_CardNo"),String)
-      _TranDate = Ctype(Reader(AliasName & "_TranDate"),DateTime)
-      _Days = Ctype(Reader(AliasName & "_Days"),Decimal)
-      If Convert.IsDBNull(Reader(AliasName & "_Remarks")) Then
-        _Remarks = String.Empty
-      Else
-        _Remarks = Ctype(Reader(AliasName & "_Remarks"), String)
-      End If
+      SIS.SYS.SQLDatabase.DBCommon.NewObj(Me, Reader)
     End Sub
     Public Sub New()
     End Sub

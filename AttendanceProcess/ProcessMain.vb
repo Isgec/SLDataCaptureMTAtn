@@ -32,6 +32,13 @@ Public Class NewAttendanceRules
         End If
       End If
     End If
+    If ProcessingDate >= Convert.ToDateTime("01/01/2021") Then
+      If OfficeID = "4" Or OfficeID = "6" Or OfficeID = "7" Or OfficeID = "8" Then
+        _Result = 13
+      Else
+        _Result = 12
+      End If
+    End If
     Return _Result
   End Function
   Private Shared ci As System.Globalization.CultureInfo = New System.Globalization.CultureInfo("en-GB", True)
@@ -188,6 +195,67 @@ Public Class NewAttendanceRules
       SIS.ATN.atnApplHeader.Update(_hdr)
     End If
   End Sub
+  Private Shared Function GetQtr(dd As DateTime) As Integer
+    Select Case dd.Month
+      Case 1, 2, 3
+        Return 1
+      Case 4, 5, 6
+        Return 2
+      Case 7, 8, 9
+        Return 3
+      Case Else
+        Return 4
+    End Select
+  End Function
+  Private Shared Function GetProrate(doj As DateTime, val As Decimal) As Decimal
+    Dim mRet As Decimal = 0.00
+    Select Case GetQtr(doj)
+      Case 1
+        Dim TotDays As Integer = 31 + DateTime.DaysInMonth(doj.Year, 2) + 31
+        Dim WrkDays As Integer = 1 + (Convert.ToDateTime("31/03/" & doj.Year).Subtract(doj)).Days
+        Return LvRoundOf(WrkDays * val / TotDays)
+      Case 2
+        Dim TotDays As Integer = 91
+        Dim WrkDays As Integer = 1 + (Convert.ToDateTime("30/06/" & doj.Year).Subtract(doj)).Days
+        Return LvRoundOf(WrkDays * val / TotDays)
+      Case 3
+        Dim TotDays As Integer = 92
+        Dim WrkDays As Integer = 1 + (Convert.ToDateTime("30/09/" & doj.Year).Subtract(doj)).Days
+        Return LvRoundOf(WrkDays * val / TotDays)
+      Case Else
+        Dim TotDays As Integer = 92
+        Dim WrkDays As Integer = 1 + (Convert.ToDateTime("31/12/" & doj.Year).Subtract(doj)).Days
+        Return LvRoundOf(WrkDays * val / TotDays)
+    End Select
+  End Function
+  Private Shared Function GetProrateMon(doj As DateTime, val As Decimal) As Decimal
+    Dim mRet As Decimal = 0.00
+    Dim TotDays As Integer = DateTime.DaysInMonth(doj.Year, doj.Month)
+    Dim WrkDays As Integer = TotDays - doj.Day + 1
+    Return LvRoundOf(WrkDays * val / TotDays)
+  End Function
+  Private Shared Function LvRoundOf(ByVal nVal As Single) As Single
+    Dim iVal As Integer
+    Dim fVal As Single
+    iVal = Int(nVal)
+    fVal = nVal - iVal
+    If fVal >= 0.75 Then
+      fVal = 1
+    Else
+      If fVal >= 0.5 Then
+        fVal = 0.5
+      Else
+        If fVal >= 0.25 Then
+          fVal = 0.5
+        Else
+          fVal = 0
+        End If
+      End If
+    End If
+    nVal = iVal + fVal
+    Return nVal
+  End Function
+
   Public Shared Function ActualProcess(ByVal DataDate As DateTime, ByVal oEmp As SIS.ATN.atnEmployees) As String
     Dim mErr As String = ""
     'ProcessingDate = DataDate
@@ -207,59 +275,190 @@ Public Class NewAttendanceRules
       End If
     End If
     Dim CardNo As String = oEmp.CardNo
-    'For Contractual Employee
-    If oEmp.Contractual Then
-      'Check Credited Leave record for the Month is created or not
-      Dim oLgr As SIS.ATN.atnBalanceTransfer = SIS.ATN.atnBalanceTransfer.GetOPBRecordForMonth(oEmp.CardNo, Month(DataDate), FinYear)
-      'Credit 2 CL for Month
-      'On prorate with DOJ
-      Dim crDays As Single = 0
-      If Month(oEmp.C_DateOfJoining) = Month(DataDate) And Year(oEmp.C_DateOfJoining) = Year(DataDate) Then
-        Select Case Convert.ToDateTime(oEmp.C_DateOfJoining).Day
-          Case Is >= 24
-            crDays = 2
-          Case Is >= 17
-            crDays = 1.5
-          Case Is >= 12
-            crDays = 1
-          Case Is >= 4
-            crDays = 0.5
-        End Select
+    'Leave Credit Logic
+    If DataDate.Year >= 2021 Then
+      Dim xGr As New SIS.ATN.atnBalanceTransfer
+      With xGr
+        .CardNo = oEmp.CardNo
+        .TranType = "OPB"
+        .SubTranType = "MC"
+        .TranDate = DataDate
+        .LeaveTypeID = ""
+        .FinYear = FinYear
+        .Remarks = ""
+        .Days = 0
+        .FinYear = FinYear
+      End With
+
+      If oEmp.C_OfficeID <> 6 Then
+        If oEmp.Contractual Then
+          'Contractual Office Employee
+          'Total 16 days, 4 days Qtr Credit
+          Dim crDays As Decimal = 0
+          If DataDate >= Convert.ToDateTime(oEmp.C_DateOfJoining) Then
+            Dim oLgr As SIS.ATN.atnBalanceTransfer = SIS.ATN.atnBalanceTransfer.GetOPBRecordForQuarter(oEmp.CardNo, Month(DataDate), FinYear)
+            If GetQtr(oEmp.C_DateOfJoining) = GetQtr(DataDate) AndAlso Year(oEmp.C_DateOfJoining) = Year(DataDate) Then
+              crDays = GetProrate(oEmp.C_DateOfJoining, 4)
+            Else
+              crDays = 4
+            End If
+            If oLgr Is Nothing Then
+              oLgr = xGr
+              oLgr.LeaveTypeID = "Z1"
+              oLgr.Days = crDays
+              oLgr.Remarks = "Qtr Credit " & crDays & " Z1 for " & GetQtr(DataDate)
+              SIS.ATN.atnBalanceTransfer.Insert(oLgr)
+            Else
+              If oLgr.Days <> crDays Then
+                oLgr.Days = crDays
+                oLgr.TranDate = DataDate
+                SIS.ATN.atnBalanceTransfer.MonthlyCreditUpdate(oLgr)
+              End If
+            End If
+          End If
+        Else
+          If oEmp.CreditQuarterly Then
+            If oEmp.C_DesignationID = "34" Or oEmp.C_DesignationID = "35" Or oEmp.C_DesignationID = "28" Or oEmp.PRKCategoryID = 19 Or oEmp.PRKCategoryID = 18 Then
+              'Conditional Employee
+              'Total 20 days, 5 days qtr Credit
+              Dim crDays As Decimal = 0
+              If DataDate >= Convert.ToDateTime(oEmp.C_DateOfJoining) Then
+                Dim oLgr As SIS.ATN.atnBalanceTransfer = SIS.ATN.atnBalanceTransfer.GetOPBRecordForQuarter(oEmp.CardNo, Month(DataDate), FinYear)
+                If GetQtr(oEmp.C_DateOfJoining) = GetQtr(DataDate) AndAlso Year(oEmp.C_DateOfJoining) = Year(DataDate) Then
+                  crDays = GetProrate(oEmp.C_DateOfJoining, 5)
+                Else
+                  crDays = 5
+                End If
+                If oLgr Is Nothing Then
+                  oLgr = xGr
+                  oLgr.LeaveTypeID = "Z1"
+                  oLgr.Days = crDays
+                  oLgr.Remarks = "Qtr Credit " & crDays & " Z1 for " & GetQtr(DataDate)
+                  SIS.ATN.atnBalanceTransfer.Insert(oLgr)
+                Else
+                  If oLgr.Days <> crDays Then
+                    oLgr.Days = crDays
+                    oLgr.TranDate = DataDate
+                    SIS.ATN.atnBalanceTransfer.MonthlyCreditUpdate(oLgr)
+                  End If
+                End If
+              End If
+            Else
+              'General Office Employee
+              'Total 30 days, 7.5 days Qtr Credit
+              Dim crDays As Decimal = 0
+              If DataDate >= Convert.ToDateTime(oEmp.C_DateOfJoining) Then
+                Dim oLgr As SIS.ATN.atnBalanceTransfer = SIS.ATN.atnBalanceTransfer.GetOPBRecordForQuarter(oEmp.CardNo, Month(DataDate), FinYear)
+                If GetQtr(oEmp.C_DateOfJoining) = GetQtr(DataDate) AndAlso Year(oEmp.C_DateOfJoining) = Year(DataDate) Then
+                  crDays = GetProrate(oEmp.C_DateOfJoining, 7.5)
+                Else
+                  crDays = 7.5
+                End If
+                If oLgr Is Nothing Then
+                  oLgr = xGr
+                  oLgr.LeaveTypeID = "Z1"
+                  oLgr.Days = crDays
+                  oLgr.Remarks = "Qtr Credit " & crDays & " Z1 for " & GetQtr(DataDate)
+                  SIS.ATN.atnBalanceTransfer.Insert(oLgr)
+                Else
+                  If oLgr.Days <> crDays Then
+                    oLgr.Days = crDays
+                    oLgr.TranDate = DataDate
+                    SIS.ATN.atnBalanceTransfer.MonthlyCreditUpdate(oLgr)
+                  End If
+                End If
+              End If
+            End If
+          End If
+        End If
       Else
-        If Convert.ToDateTime(oEmp.C_DateOfJoining, ci) < Convert.ToDateTime(DataDate, ci) Then
-          crDays = 2
+        If oEmp.Contractual Then
+          'Contractual Site Employee
+          'Total 24 days, 2 days Monthly Credit
+          Dim crDays As Decimal = 0
+          If DataDate >= Convert.ToDateTime(oEmp.C_DateOfJoining) Then
+            Dim oLgr As SIS.ATN.atnBalanceTransfer = SIS.ATN.atnBalanceTransfer.GetOPBRecordForMonth(oEmp.CardNo, Month(DataDate), FinYear)
+            If Month(oEmp.C_DateOfJoining) = Month(DataDate) AndAlso Year(oEmp.C_DateOfJoining) = Year(DataDate) Then
+              crDays = GetProrateMon(oEmp.C_DateOfJoining, 2)
+            Else
+              crDays = 2
+            End If
+            If oLgr Is Nothing Then
+              oLgr = xGr
+              oLgr.LeaveTypeID = "CL"
+              oLgr.Days = crDays
+              oLgr.Remarks = "Monthly Credit " & crDays & " CL for " & MonthName(DataDate.Month, True)
+              SIS.ATN.atnBalanceTransfer.Insert(oLgr)
+            Else
+              If oLgr.Days <> crDays Then
+                oLgr.Days = crDays
+                oLgr.TranDate = DataDate
+                SIS.ATN.atnBalanceTransfer.MonthlyCreditUpdate(oLgr)
+              End If
+            End If
+          End If
+        Else
+          'Old Rule CL,SL, PL(Next Year) =>Nothing to do
         End If
       End If
-      If oLgr Is Nothing Then
-        oLgr = New SIS.ATN.atnBalanceTransfer
-        With oLgr
-          .CardNo = oEmp.CardNo
-          .TranType = "OPB"
-          .SubTranType = "MC"
-          .TranDate = DataDate
-          .LeaveTypeID = "CL"
-          .FinYear = FinYear
-          .Remarks = "Monthly Credit " & crDays & " CL for " & MonthName(DataDate.Month, True)
-          .Days = crDays
-          .FinYear = FinYear
-        End With
-        SIS.ATN.atnBalanceTransfer.Insert(oLgr)
-      Else
-        With oLgr
-          .CardNo = oEmp.CardNo
-          .TranType = "OPB"
-          .SubTranType = "MC"
-          .TranDate = DataDate
-          .LeaveTypeID = "CL"
-          .FinYear = FinYear
-          .Remarks = "Monthly Credit " & crDays & " CL for " & MonthName(DataDate.Month, True)
-          .Days = crDays
-          .FinYear = FinYear
-        End With
-        SIS.ATN.atnBalanceTransfer.MonthlyCreditUpdate(oLgr)
+    Else
+      'For Contractual Employee
+      If oEmp.Contractual Then
+        'Check Credited Leave record for the Month is created or not
+        Dim oLgr As SIS.ATN.atnBalanceTransfer = SIS.ATN.atnBalanceTransfer.GetOPBRecordForMonth(oEmp.CardNo, Month(DataDate), FinYear)
+        'Credit 2 CL for Month
+        'On prorate with DOJ
+        Dim crDays As Single = 0
+        If Month(oEmp.C_DateOfJoining) = Month(DataDate) And Year(oEmp.C_DateOfJoining) = Year(DataDate) Then
+          Select Case Convert.ToDateTime(oEmp.C_DateOfJoining).Day
+            Case Is >= 24
+              crDays = 2
+            Case Is >= 17
+              crDays = 1.5
+            Case Is >= 12
+              crDays = 1
+            Case Is >= 4
+              crDays = 0.5
+          End Select
+        Else
+          If Convert.ToDateTime(oEmp.C_DateOfJoining, ci) < Convert.ToDateTime(DataDate, ci) Then
+            crDays = 2
+          End If
+        End If
+        If oLgr Is Nothing Then
+          oLgr = New SIS.ATN.atnBalanceTransfer
+          With oLgr
+            .CardNo = oEmp.CardNo
+            .TranType = "OPB"
+            .SubTranType = "MC"
+            .TranDate = DataDate
+            .LeaveTypeID = "CL"
+            .FinYear = FinYear
+            .Remarks = "Monthly Credit " & crDays & " CL for " & MonthName(DataDate.Month, True)
+            .Days = crDays
+            .FinYear = FinYear
+          End With
+          SIS.ATN.atnBalanceTransfer.Insert(oLgr)
+        Else
+          With oLgr
+            .CardNo = oEmp.CardNo
+            .TranType = "OPB"
+            .SubTranType = "MC"
+            .TranDate = DataDate
+            .LeaveTypeID = "CL"
+            .FinYear = FinYear
+            .Remarks = "Monthly Credit " & crDays & " CL for " & MonthName(DataDate.Month, True)
+            .Days = crDays
+            .FinYear = FinYear
+          End With
+          SIS.ATN.atnBalanceTransfer.MonthlyCreditUpdate(oLgr)
+        End If
       End If
+      'End For Contractual Employee
+
     End If
-    'End For Contractual Employee
+
+
 
     Dim OfficeID As Integer = GetOfficeID(oEmp.C_OfficeID)
     Dim oHld As SIS.ATN.atnHolidays = SIS.ATN.atnHolidays.GetByHoliday(DataDate, OfficeID, FinYear)
@@ -338,7 +537,7 @@ Public Class NewAttendanceRules
     End If
     '========================================
     'In All Case
-    UpdateInterweavingHolidays(oAtnd.AttenID)
+    If oEmp.C_OfficeID = 6 And Not oEmp.Contractual Then UpdateInterweavingHolidays(oAtnd.AttenID)
     '========================================
     Return oAtnd.PunchStatusID & ", " & oAtnd.Punch1Time & ", " & oAtnd.Punch2Time & "," & mErr
   End Function
@@ -401,7 +600,41 @@ Public Class NewAttendanceRules
           SIS.ATN.atnNewAttendance.Update(oAtnd)
           Return "" '**********
         End If
-        '2.
+        '2. WFH
+        Dim oWFH As SIS.ATN.WFHRooster = SIS.ATN.WFHRooster.GetByCardDate(oAtnd.CardNo, oAtnd.AttenDate)
+        If oWFH IsNot Nothing Then
+          If oWFH.WFHFullDay Then
+            With oAtnd
+              .Punch1Time = 0
+              .Punch2Time = 0
+              .PunchStatusID = "PR"
+              .PunchValue = 1
+              .FinalValue = 1
+              .NeedsRegularization = False
+              .FirstPunchMachine = ""
+              .SecondPunchMachine = ""
+              .FinYear = FinYear
+              .ApplStatusID = 10
+            End With
+            SIS.ATN.atnNewAttendance.Update(oAtnd)
+            Return ""  '**********
+          End If
+        Else
+          oWFH = New SIS.ATN.WFHRooster
+        End If
+        If Not oWFH.WFHFullDay And oAtnd.ApplStatusID = "10" And oAtnd.Applied = False Then
+          With oAtnd
+            .ApplStatusID = ""
+            .Punch1Time = 0
+            .Punch2Time = 0
+            .PunchStatusID = "AD"
+            .PunchValue = 0
+            .FinalValue = 0
+            .NeedsRegularization = True
+          End With
+          SIS.ATN.atnNewAttendance.Update(oAtnd)
+        End If
+        '3.
         If Not oPunchReq Is Nothing Then
           If oPunchReq.NoPunch Then
             With oAtnd
@@ -419,7 +652,7 @@ Public Class NewAttendanceRules
             Return ""  '**********
           End If
         End If
-        '3.
+        '4.
         If oRaw Is Nothing Then
           With oAtnd
             If OfficeID = 6 Then
@@ -930,12 +1163,12 @@ Public Class NewAttendanceRules
               UpdateAttendanceFromRawData(oAtnd, OfficeID)
             End If
             PostAdvanceApplication(oAtnd)
-            UpdateInterweavingHolidays(oAtnd.AttenID)
+            If oEmp.C_OfficeID = 6 And Not oEmp.Contractual Then UpdateInterweavingHolidays(oAtnd.AttenID)
           Else
             If ImportRawData Then
               UpdateAttendanceFromRawData(oAtnd, OfficeID)
             End If
-            UpdateInterweavingHolidays(oAtnd.AttenID)
+            If oEmp.C_OfficeID = 6 And Not oEmp.Contractual Then UpdateInterweavingHolidays(oAtnd.AttenID)
             'Delete this Application Line, or complete Application
             'This Delete is Stopped in new system
             '*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
